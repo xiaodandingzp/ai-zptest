@@ -192,7 +192,7 @@ class LLMClientFactory:
     DEFAULT_CLIENT_TYPE = "litellm"
     
     @staticmethod
-    def create_client(model_config, client_type=None):
+    def create_client(model_config, client_type="langchain"):
         """
         创建 LLM 客户端
         

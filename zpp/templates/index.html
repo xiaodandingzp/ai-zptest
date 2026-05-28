@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>zpp测试页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+        }
+        
+        /* 左侧菜单栏 */
+        .sidebar {
+            width: 240px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #34495e;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .sidebar-menu {
+            flex: 1;
+            padding: 20px 0;
+        }
+        
+        .menu-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .menu-item:hover {
+            background: #34495e;
+        }
+        
+        .menu-item.active {
+            background: #3498db;
+        }
+        
+        .menu-icon {
+            font-size: 18px;
+        }
+        
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f5;
+        }
+        
+        .content-header {
+            padding: 20px;
+            background: white;
+            border-bottom: 1px solid #ddd;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        /* 对话页面样式 */
+        .chat-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message.user {
+            align-items: flex-end;
+        }
+        
+        .message.assistant {
+            align-items: flex-start;
+        }
+        
+        .message.error {
+            align-items: flex-start;
+        }
+        
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+        }
+        
+        .message.user .message-content {
+            background: #3498db;
+            color: white;
+        }
+        
+        .message.assistant .message-content {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+        
+        .message.error .message-content {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+        
+        .message-role {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+        
+        .chat-input-area {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .chat-input:focus {
+            border-color: #3498db;
+        }
+        
+        .send-btn {
+            padding: 12px 24px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .send-btn:hover {
+            background: #2980b9;
+        }
+        
+        .send-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        /* 模型配置页面样式 */
+        .config-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 900px;
+        }
+        
+        .config-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .model-list {
+            margin-bottom: 30px;
+        }
+        
+        .model-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .model-card:hover {
+            border-color: #3498db;
+            background: #f8f9fa;
+        }
+        
+        .model-card.active {
+            border-color: #3498db;
+            background: #e3f2fd;
+        }
+        
+        .model-card-content {
+            flex: 1;
+        }
+        
+        .model-name {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .model-provider {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+        
+        .model-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #229954;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .add-model-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .add-model-section h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            flex: 1;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #34495e;
+            font-size: 14px;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .config-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .config-section h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        .toast.success {
+            background: #27ae60;
+        }
+        
+        .toast.error {
+            background: #e74c3c;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #7f8c8d;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .current-model-badge {
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">zpp</div>
+        <div class="sidebar-menu">
+            <div class="menu-item active" data-page="chat">
+                <span class="menu-icon">💬</span>
+                <span>对话</span>
+            </div>
+            <div class="menu-item" data-page="config">
+                <span class="menu-icon">⚙️</span>
+                <span>模型配置</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div id="chat-page" class="page">
+            <div class="content-header">对话 <span id="current-model-badge" class="current-model-badge"></span></div>
+            <div class="content-area">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message assistant">
+                            <div class="message-role">助手</div>
+                            <div class="message-content">你好！我是 AI 助手，有什么可以帮助你的吗？</div>
+                        </div>
+                    </div>
+                    <div class="loading" id="chat-loading">正在思考中...</div>
+                    <div class="chat-input-area">
+                        <input type="text" class="chat-input" id="chat-input" placeholder="输入消息，按回车发送...">
+                        <button class="send-btn" id="send-btn">发送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="config-page" class="page" style="display: none;">
+            <div class="content-header">模型配置</div>
+            <div class="content-area">
+                <div class="config-container">
+                    <h2 class="config-title">模型管理</h2>
+                    
+                    <!-- 已配置的模型列表 -->
+                    <div class="model-list" id="model-list">
+                        <!-- 动态加载 -->
+                    </div>
+                    
+                    <!-- 添加新模型 -->
+                    <div class="add-model-section">
+                        <h3>添加新模型</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">提供商</label>
+                                <select class="form-select" id="new-provider">
+                                    <!-- 动态加载 -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">模型</label>
+                                <select class="form-select" id="new-model-select">
+                                    <!-- 动态加载 -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">显示名称</label>
+                                <input type="text" class="form-input" id="new-display-name" placeholder="例如: 我的 GPT-4">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">API Key</label>
+                                <input type="password" class="form-input" id="new-api-key" placeholder="请输入 API Key">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">API 基础地址（可选）</label>
+                                <input type="text" class="form-input" id="new-api-base" placeholder="留空使用默认地址">
+                            </div>
+                        </div>
+                        <button class="btn btn-success" id="add-model-btn">添加模型</button>
+                    </div>
+                    
+                    <!-- 编辑当前选中模型的配置 -->
+                    <div class="config-section" id="edit-section" style="display: none;">
+                        <h3>编辑模型配置: <span id="edit-model-name"></span></h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">API Key</label>
+                                <input type="password" class="form-input" id="edit-api-key" placeholder="请输入新的 API Key">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">API 基础地址</label>
+                                <input type="text" class="form-input" id="edit-api-base" placeholder="API 基础地址">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="save-config-btn">保存配置</button>
+                        <button class="btn btn-secondary" id="cancel-edit-btn">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script>
+        // 应用状态
+        const state = {
+            currentPage: 'chat',
+            messages: [],
+            models: {},
+            currentModel: '',
+            providers: {},
+            editingModel: null
+        };
+        
+        // DOM 元素
+        const elements = {
+            menuItems: document.querySelectorAll('.menu-item'),
+            chatPage: document.getElementById('chat-page'),
+            configPage: document.getElementById('config-page'),
+            chatMessages: document.getElementById('chat-messages'),
+            chatInput: document.getElementById('chat-input'),
+            sendBtn: document.getElementById('send-btn'),
+            chatLoading: document.getElementById('chat-loading'),
+            currentModelBadge: document.getElementById('current-model-badge'),
+            modelList: document.getElementById('model-list'),
+            newProvider: document.getElementById('new-provider'),
+            newModelSelect: document.getElementById('new-model-select'),
+            newDisplayName: document.getElementById('new-display-name'),
+            newApiKey: document.getElementById('new-api-key'),
+            newApiBase: document.getElementById('new-api-base'),
+            addModelBtn: document.getElementById('add-model-btn'),
+            editSection: document.getElementById('edit-section'),
+            editModelName: document.getElementById('edit-model-name'),
+            editApiKey: document.getElementById('edit-api-key'),
+            editApiBase: document.getElementById('edit-api-base'),
+            saveConfigBtn: document.getElementById('save-config-btn'),
+            cancelEditBtn: document.getElementById('cancel-edit-btn'),
+            toast: document.getElementById('toast')
+        };
+        
+        // 显示提示消息
+        function showToast(message, type = 'success') {
+            elements.toast.textContent = message;
+            elements.toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                elements.toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 切换页面
+        function switchPage(page) {
+            state.currentPage = page;
+            
+            elements.menuItems.forEach(item => {
+                item.classList.toggle('active', item.dataset.page === page);
+            });
+            
+            elements.chatPage.style.display = page === 'chat' ? 'flex' : 'none';
+            elements.configPage.style.display = page === 'config' ? 'flex' : 'none';
+            
+            if (page === 'config') {
+                loadProviders();
+                loadModels();
+            } else if (page === 'chat') {
+                updateCurrentModelBadge();
+            }
+        }
+        
+        // 加载提供商列表
+        async function loadProviders() {
+            try {
+                const response = await fetch('/api/providers');
+                state.providers = await response.json();
+                
+                // 填充提供商下拉框
+                elements.newProvider.innerHTML = '';
+                for (const [key, provider] of Object.entries(state.providers)) {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = provider.name;
+                    elements.newProvider.appendChild(option);
+                }
+                
+                // 加载第一个提供商的模型列表
+                updateModelSelect();
+            } catch (error) {
+                showToast('加载提供商失败', 'error');
+            }
+        }
+        
+        // 更新模型下拉框
+        function updateModelSelect() {
+            const provider = elements.newProvider.value;
+            const providerInfo = state.providers[provider] || {};
+            const models = providerInfo.models || [];
+            
+            elements.newModelSelect.innerHTML = '';
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                elements.newModelSelect.appendChild(option);
+            });
+        }
+        
+        // 加载模型列表
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/models');
+                const data = await response.json();
+                state.models = data.models;
+                state.currentModel = data.current_model;
+                
+                renderModelList();
+            } catch (error) {
+                showToast('加载模型列表失败', 'error');
+            }
+        }
+        
+        // 渲染模型列表
+        function renderModelList() {
+            if (Object.keys(state.models).length === 0) {
+                elements.modelList.innerHTML = '<div class="empty-state">暂无模型配置，请添加新模型</div>';
+                return;
+            }
+            
+            elements.modelList.innerHTML = '';
+            for (const [modelId, config] of Object.entries(state.models)) {
+                const isActive = modelId === state.currentModel;
+                const card = document.createElement('div');
+                card.className = `model-card ${isActive ? 'active' : ''}`;
+                card.innerHTML = `
+                    <div class="model-card-content">
+                        <div class="model-name">${config.display_name || modelId} ${isActive ? '<span class="current-model-badge">当前使用</span>' : ''}</div>
+                        <div class="model-provider">${config.model}</div>
+                    </div>
+                    <div class="model-actions">
+                        ${!isActive ? `<button class="btn btn-primary use-model-btn" data-id="${modelId}">使用</button>` : ''}
+                        <button class="btn btn-secondary edit-model-btn" data-id="${modelId}">编辑</button>
+                        <button class="btn btn-danger delete-model-btn" data-id="${modelId}">删除</button>
+                    </div>
+                `;
+                elements.modelList.appendChild(card);
+            }
+            
+            // 绑定事件
+            document.querySelectorAll('.use-model-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    setCurrentModel(btn.dataset.id);
+                });
+            });
+            
+            document.querySelectorAll('.edit-model-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    editModel(btn.dataset.id);
+                });
+            });
+            
+            document.querySelectorAll('.delete-model-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteModel(btn.dataset.id);
+                });
+            });
+        }
+        
+        // 设置当前模型
+        async function setCurrentModel(modelId) {
+            try {
+                const response = await fetch('/api/models/current', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_id: modelId })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    state.currentModel = modelId;
+                    renderModelList();
+                    updateCurrentModelBadge();
+                    showToast('已切换模型');
+                }
+            } catch (error) {
+                showToast('切换模型失败', 'error');
+            }
+        }
+        
+        // 编辑模型
+        async function editModel(modelId) {
+            state.editingModel = modelId;
+            const config = state.models[modelId];
+            
+            elements.editModelName.textContent = config.display_name || modelId;
+            elements.editApiKey.value = '';
+            elements.editApiKey.placeholder = config.api_key_display || '请输入新的 API Key';
+            elements.editApiBase.value = config.api_base || '';
+            
+            elements.editSection.style.display = 'block';
+        }
+        
+        // 保存模型配置
+        async function saveModelConfig() {
+            if (!state.editingModel) return;
+            
+            const config = {
+                api_key: elements.editApiKey.value,
+                api_base: elements.editApiBase.value
+            };
+            
+            try {
+                const response = await fetch(`/api/models/${state.editingModel}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showToast('配置保存成功');
+                    loadModels();
+                    elements.editSection.style.display = 'none';
+                    state.editingModel = null;
+                }
+            } catch (error) {
+                showToast('保存配置失败', 'error');
+            }
+        }
+        
+        // 删除模型
+        async function deleteModel(modelId) {
+            if (!confirm('确定要删除此模型配置吗？')) return;
+            
+            try {
+                const response = await fetch(`/api/models/${modelId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showToast('模型已删除');
+                    loadModels();
+                }
+            } catch (error) {
+                showToast('删除失败', 'error');
+            }
+        }
+        
+        // 添加新模型
+        async function addModel() {
+            const provider = elements.newProvider.value;
+            const model = elements.newModelSelect.value;
+            const displayName = elements.newDisplayName.value || model;
+            const apiKey = elements.newApiKey.value;
+            const apiBase = elements.newApiBase.value;
+            
+            const modelId = `${provider}-${Date.now()}`;
+            const modelName = provider === 'openai' ? model : `${provider}/${model}`;
+            
+            try {
+                const response = await fetch('/api/models', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model_id: modelId,
+                        provider: provider,
+                        display_name: displayName,
+                        model: modelName,
+                        api_key: apiKey,
+                        api_base: apiBase
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showToast('模型添加成功');
+                    loadModels();
+                    // 清空表单
+                    elements.newDisplayName.value = '';
+                    elements.newApiKey.value = '';
+                    elements.newApiBase.value = '';
+                }
+            } catch (error) {
+                showToast('添加失败', 'error');
+            }
+        }
+        
+        // 更新当前模型标签
+        function updateCurrentModelBadge() {
+            if (state.currentModel && state.models[state.currentModel]) {
+                elements.currentModelBadge.textContent = state.models[state.currentModel].display_name || state.currentModel;
+            } else {
+                elements.currentModelBadge.textContent = '未配置';
+            }
+        }
+        
+        // 添加消息到聊天界面
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            let roleText = '助手';
+            if (role === 'user') {
+                roleText = '你';
+            } else if (role === 'error') {
+                roleText = '错误';
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-role">${roleText}</div>
+                <div class="message-content">${content}</div>
+            `;
+            
+            elements.chatMessages.appendChild(messageDiv);
+            elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+        }
+        
+        // 发送消息
+        async function sendMessage() {
+            const input = elements.chatInput.value.trim();
+            if (!input) return;
+            
+            state.messages.push({
+                role: 'user',
+                content: input
+            });
+            addMessage('user', input);
+            
+            elements.chatInput.value = '';
+            elements.sendBtn.disabled = true;
+            elements.chatLoading.classList.add('show');
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: state.messages })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    state.messages.push({
+                        role: 'assistant',
+                        content: result.response
+                    });
+                    addMessage('assistant', result.response);
+                } else {
+                    const errorMsg = result.error || '对话失败';
+                    addMessage('error', errorMsg);
+                    showToast(errorMsg, 'error');
+                }
+            } catch (error) {
+                const errorMsg = '对话失败，请检查网络连接';
+                addMessage('error', errorMsg);
+                showToast(errorMsg, 'error');
+            } finally {
+                elements.sendBtn.disabled = false;
+                elements.chatLoading.classList.remove('show');
+            }
+        }
+        
+        // 事件监听
+        elements.menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                switchPage(item.dataset.page);
+            });
+        });
+        
+        elements.sendBtn.addEventListener('click', sendMessage);
+        
+        elements.chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        elements.newProvider.addEventListener('change', updateModelSelect);
+        
+        elements.addModelBtn.addEventListener('click', addModel);
+        
+        elements.saveConfigBtn.addEventListener('click', saveModelConfig);
+        
+        elements.cancelEditBtn.addEventListener('click', () => {
+            elements.editSection.style.display = 'none';
+            state.editingModel = null;
+        });
+        
+        // 初始化
+        loadModels();
+        updateCurrentModelBadge();
+        switchPage('chat');
+    </script>
+</body>
+</html>

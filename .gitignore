@@ -31,3 +31,7 @@ env/
 .idea/
 *.swp
 *.swo
+
+# zpp data
+.zpp/
+chroma_db/

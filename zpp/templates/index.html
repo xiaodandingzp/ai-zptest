@@ -395,6 +395,107 @@
             padding: 40px;
             color: #7f8c8d;
         }
+        
+        /* 知识库页面样式 */
+        .knowledge-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .knowledge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .file-list {
+            margin-top: 20px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #fafafa;
+        }
+        
+        .file-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .file-icon {
+            font-size: 24px;
+            margin-right: 15px;
+        }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .file-meta {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .file-unsupported {
+            color: #e74c3c;
+            font-size: 12px;
+        }
+        
+        .upload-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #ddd;
+            text-align: center;
+        }
+        
+        .upload-section.dragover {
+            border-color: #3498db;
+            background: #e3f2fd;
+        }
+        
+        .upload-section input[type="file"] {
+            display: none;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            color: #bdc3c7;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            color: #7f8c8d;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .init-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -404,6 +505,10 @@
             <div class="menu-item active" data-page="chat">
                 <span class="menu-icon">💬</span>
                 <span>对话</span>
+            </div>
+            <div class="menu-item" data-page="knowledge">
+                <span class="menu-icon">📚</span>
+                <span>知识库</span>
             </div>
             <div class="menu-item" data-page="config">
                 <span class="menu-icon">⚙️</span>
@@ -427,6 +532,42 @@
                     <div class="chat-input-area">
                         <input type="text" class="chat-input" id="chat-input" placeholder="输入消息，按回车发送...">
                         <button class="send-btn" id="send-btn">发送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="knowledge-page" class="page" style="display: none;">
+            <div class="content-header">知识库管理</div>
+            <div class="content-area">
+                <div class="knowledge-container">
+                    <div class="knowledge-header">
+                        <h2 class="config-title">知识库文件</h2>
+                        <div>
+                            <button class="btn btn-primary" id="refresh-files-btn">刷新</button>
+                            <button class="btn btn-success" id="init-knowledge-btn">初始化知识库</button>
+                        </div>
+                    </div>
+                    
+                    <div id="knowledge-dir-info" style="margin-bottom: 15px; color: #7f8c8d; font-size: 14px;"></div>
+                    
+                    <!-- 文件列表 -->
+                    <div class="file-list" id="knowledge-file-list">
+                        <!-- 动态加载 -->
+                    </div>
+                    
+                    <!-- 上传区域 -->
+                    <div class="upload-section" id="upload-section">
+                        <div class="upload-icon">📁</div>
+                        <p>拖拽文件到此处或点击上传</p>
+                        <input type="file" id="file-input" multiple>
+                        <button class="btn btn-primary" id="select-file-btn">选择文件</button>
+                        <p class="upload-hint">支持的格式: .txt, .md, .json, .py, .js, .html, .css, .docx</p>
+                    </div>
+                    
+                    <!-- 初始化提示 -->
+                    <div class="init-section" id="init-section" style="display: none;">
+                        <p>文件已更新，请点击"初始化知识库"按钮更新向量数据库</p>
                     </div>
                 </div>
             </div>
@@ -508,13 +649,16 @@
             models: {},
             currentModel: '',
             providers: {},
-            editingModel: null
+            editingModel: null,
+            knowledgeFiles: [],
+            supportedExtensions: []
         };
         
         // DOM 元素
         const elements = {
             menuItems: document.querySelectorAll('.menu-item'),
             chatPage: document.getElementById('chat-page'),
+            knowledgePage: document.getElementById('knowledge-page'),
             configPage: document.getElementById('config-page'),
             chatMessages: document.getElementById('chat-messages'),
             chatInput: document.getElementById('chat-input'),
@@ -534,6 +678,15 @@
             editApiBase: document.getElementById('edit-api-base'),
             saveConfigBtn: document.getElementById('save-config-btn'),
             cancelEditBtn: document.getElementById('cancel-edit-btn'),
+            // 知识库相关
+            knowledgeFileList: document.getElementById('knowledge-file-list'),
+            knowledgeDirInfo: document.getElementById('knowledge-dir-info'),
+            refreshFilesBtn: document.getElementById('refresh-files-btn'),
+            initKnowledgeBtn: document.getElementById('init-knowledge-btn'),
+            uploadSection: document.getElementById('upload-section'),
+            fileInput: document.getElementById('file-input'),
+            selectFileBtn: document.getElementById('select-file-btn'),
+            initSection: document.getElementById('init-section'),
             toast: document.getElementById('toast')
         };
         
@@ -555,6 +708,7 @@
             });
             
             elements.chatPage.style.display = page === 'chat' ? 'flex' : 'none';
+            elements.knowledgePage.style.display = page === 'knowledge' ? 'flex' : 'none';
             elements.configPage.style.display = page === 'config' ? 'flex' : 'none';
             
             if (page === 'config') {
@@ -562,6 +716,8 @@
                 loadModels();
             } else if (page === 'chat') {
                 updateCurrentModelBadge();
+            } else if (page === 'knowledge') {
+                loadKnowledgeFiles();
             }
         }
         
@@ -887,9 +1043,203 @@
             state.editingModel = null;
         });
         
+        // ========== 知识库管理 ==========
+        
+        // 加载知识库文件列表
+        async function loadKnowledgeFiles() {
+            try {
+                const response = await fetch('/api/knowledge/files');
+                const data = await response.json();
+                
+                state.knowledgeFiles = data.files || [];
+                state.supportedExtensions = data.supported_extensions || [];
+                
+                elements.knowledgeDirInfo.textContent = `知识库目录: ${data.knowledge_dir || ''}`;
+                
+                renderKnowledgeFiles();
+            } catch (error) {
+                showToast('加载文件列表失败', 'error');
+            }
+        }
+        
+        // 渲染知识库文件列表
+        function renderKnowledgeFiles() {
+            if (state.knowledgeFiles.length === 0) {
+                elements.knowledgeFileList.innerHTML = '<div class="empty-state">知识库为空，请上传文件</div>';
+                return;
+            }
+            
+            elements.knowledgeFileList.innerHTML = '';
+            
+            state.knowledgeFiles.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                const icon = getFileIcon(file.extension);
+                const supported = file.supported ? '' : '<span class="file-unsupported">（不支持）</span>';
+                
+                fileItem.innerHTML = `
+                    <div class="file-icon">${icon}</div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name} ${supported}</div>
+                        <div class="file-meta">${file.size_display} | ${file.extension}</div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-danger delete-file-btn" data-name="${file.name}">删除</button>
+                    </div>
+                `;
+                
+                elements.knowledgeFileList.appendChild(fileItem);
+            });
+            
+            // 绑定删除事件
+            document.querySelectorAll('.delete-file-btn').forEach(btn => {
+                btn.addEventListener('click', () => deleteKnowledgeFile(btn.dataset.name));
+            });
+        }
+        
+        // 获取文件图标
+        function getFileIcon(ext) {
+            const icons = {
+                '.txt': '📄',
+                '.md': '📝',
+                '.json': '📋',
+                '.py': '🐍',
+                '.js': '📜',
+                '.html': '🌐',
+                '.css': '🎨',
+                '.docx': '📕'
+            };
+            return icons[ext] || '📄';
+        }
+        
+        // 删除知识库文件
+        async function deleteKnowledgeFile(filename) {
+            if (!confirm(`确定要删除文件 "${filename}" 吗？`)) return;
+            
+            try {
+                const response = await fetch(`/api/knowledge/files/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('文件已删除');
+                    loadKnowledgeFiles();
+                    elements.initSection.style.display = 'block';
+                } else {
+                    showToast(result.error || '删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('删除失败', 'error');
+            }
+        }
+        
+        // 上传文件
+        async function uploadFiles(files) {
+            const formData = new FormData();
+            let hasValidFiles = false;
+            
+            for (const file of files) {
+                const ext = '.' + file.name.split('.').pop().toLowerCase();
+                if (state.supportedExtensions.includes(ext)) {
+                    formData.append('file', file);
+                    hasValidFiles = true;
+                } else {
+                    showToast(`不支持的文件格式: ${file.name}`, 'error');
+                }
+            }
+            
+            if (!hasValidFiles) return;
+            
+            try {
+                const response = await fetch('/api/knowledge/files', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('文件上传成功');
+                    loadKnowledgeFiles();
+                    elements.initSection.style.display = 'block';
+                } else {
+                    showToast(result.error || '上传失败', 'error');
+                }
+            } catch (error) {
+                showToast('上传失败', 'error');
+            }
+        }
+        
+        // 初始化知识库
+        async function initKnowledge() {
+            elements.initKnowledgeBtn.disabled = true;
+            elements.initKnowledgeBtn.textContent = '初始化中...';
+            
+            try {
+                const response = await fetch('/api/knowledge/init', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(`知识库初始化成功，处理了 ${result.file_count} 个文件，${result.chunk_count} 个文本块`);
+                    elements.initSection.style.display = 'none';
+                } else {
+                    showToast(result.error || '初始化失败', 'error');
+                }
+            } catch (error) {
+                showToast('初始化失败', 'error');
+            } finally {
+                elements.initKnowledgeBtn.disabled = false;
+                elements.initKnowledgeBtn.textContent = '初始化知识库';
+            }
+        }
+        
+        // 知识库事件监听
+        elements.refreshFilesBtn.addEventListener('click', loadKnowledgeFiles);
+        elements.initKnowledgeBtn.addEventListener('click', initKnowledge);
+        
+        elements.selectFileBtn.addEventListener('click', () => {
+            elements.fileInput.click();
+        });
+        
+        elements.fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFiles(e.target.files);
+                e.target.value = '';
+            }
+        });
+        
+        // 拖拽上传
+        elements.uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            elements.uploadSection.classList.add('dragover');
+        });
+        
+        elements.uploadSection.addEventListener('dragleave', () => {
+            elements.uploadSection.classList.remove('dragover');
+        });
+        
+        elements.uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            elements.uploadSection.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length > 0) {
+                uploadFiles(e.dataTransfer.files);
+            }
+        });
+        
         // 初始化
         loadModels();
         updateCurrentModelBadge();
+        // 预加载支持的知识库文件格式
+        loadKnowledgeFiles();
         switchPage('chat');
     </script>
 </body>

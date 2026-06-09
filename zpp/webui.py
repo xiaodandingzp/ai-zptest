@@ -1,7 +1,9 @@
 from flask import Flask, render_template, jsonify, request
 from .config import ConfigManager
 from .llm import LLMClient
+from .knowledge import KnowledgeManager, is_vectorstore_available
 import os
+from werkzeug.utils import secure_filename
 
 def create_app():
     """创建 Flask 应用"""
@@ -123,16 +125,159 @@ def create_app():
         """处理对话请求"""
         data = request.json
         messages = data.get('messages', [])
+        use_rag = data.get('use_rag', True)  # 是否使用 RAG
         
         if not messages:
             return jsonify({'error': '消息不能为空'}), 400
         
         try:
-            response = llm_client.chat(messages)
-            return jsonify({'success': True, 'response': response})
+            # 如果启用 RAG 且向量数据库可用
+            context = ""
+            if use_rag and is_vectorstore_available():
+                # 获取最后一条用户消息
+                last_message = messages[-1] if messages else {}
+                user_query = last_message.get('content', '')
+                
+                if user_query:
+                    knowledge_manager = KnowledgeManager()
+                    context = knowledge_manager.get_context_for_query(user_query, k=4)
+                    
+                    if context:
+                        # 在消息开头添加系统提示和上下文
+                        system_message = {
+                            "role": "system",
+                            "content": f"""你是一个有帮助的AI助手。回答问题时参考以下参考资料。如果参考资料中没有相关信息，请根据你的知识回答。
+
+参考资料:
+{context}"""
+                        }
+                        # 构建带上下文的消息
+                        messages_with_context = [system_message] + messages
+                    else:
+                        messages_with_context = messages
+                else:
+                    messages_with_context = messages
+            else:
+                messages_with_context = messages
+            
+            response = llm_client.chat(messages_with_context)
+            return jsonify({
+                'success': True, 
+                'response': response,
+                'used_rag': bool(context)
+            })
         except ValueError as e:
             return jsonify({'error': str(e)}), 400
         except Exception as e:
             return jsonify({'error': f'对话失败: {str(e)}'}), 500
+    
+    # ========== 知识库管理 API ==========
+    
+    @app.route('/api/knowledge/status', methods=['GET'])
+    def knowledge_status():
+        """获取知识库状态"""
+        return jsonify({
+            'available': is_vectorstore_available(),
+            'knowledge_dir': str(KnowledgeManager().knowledge_dir)
+        })
+    
+    @app.route('/api/knowledge/init', methods=['POST'])
+    def init_knowledge():
+        """初始化知识库"""
+        if not is_vectorstore_available():
+            return jsonify({
+                'success': False, 
+                'error': '向量数据库功能不可用，请安装依赖'
+            }), 400
+        
+        data = request.json or {}
+        knowledge_dir = data.get('knowledge_dir')
+        
+        manager = KnowledgeManager(knowledge_dir)
+        result = manager.init_knowledge_base(verbose=True)
+        
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+    
+    @app.route('/api/knowledge/search', methods=['POST'])
+    def search_knowledge():
+        """搜索知识库"""
+        data = request.json
+        query = data.get('query', '')
+        k = data.get('k', 4)
+        
+        if not query:
+            return jsonify({'error': '查询不能为空'}), 400
+        
+        manager = KnowledgeManager()
+        results = manager.search(query, k=k)
+        
+        return jsonify({'results': results})
+    
+    @app.route('/api/knowledge/clear', methods=['POST'])
+    def clear_knowledge():
+        """清空知识库"""
+        manager = KnowledgeManager()
+        manager.clear_knowledge_base()
+        return jsonify({'success': True, 'message': '知识库已清空'})
+    
+    @app.route('/api/knowledge/files', methods=['GET'])
+    def list_knowledge_files():
+        """列出知识库文件"""
+        manager = KnowledgeManager()
+        files = manager.list_knowledge_files()
+        return jsonify({
+            'files': files,
+            'knowledge_dir': str(manager.knowledge_dir),
+            'supported_extensions': manager.get_supported_extensions()
+        })
+    
+    @app.route('/api/knowledge/files', methods=['POST'])
+    def add_knowledge_file():
+        """添加知识库文件"""
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': '没有选择文件'}), 400
+        
+        # 安全的文件名
+        filename = secure_filename(file.filename)
+        if not filename:
+            return jsonify({'success': False, 'error': '无效的文件名'}), 400
+        
+        manager = KnowledgeManager()
+        
+        # 检查文件格式
+        if not manager.is_supported_file(filename):
+            return jsonify({
+                'success': False, 
+                'error': f"不支持的文件格式，支持: {', '.join(manager.get_supported_extensions())}"
+            }), 400
+        
+        # 读取文件内容
+        content = file.read()
+        
+        # 添加文件
+        result = manager.add_file(filename, content)
+        
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
+    
+    @app.route('/api/knowledge/files/<filename>', methods=['DELETE'])
+    def delete_knowledge_file(filename):
+        """删除知识库文件"""
+        manager = KnowledgeManager()
+        result = manager.delete_file(filename)
+        
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify(result), 400
     
     return app

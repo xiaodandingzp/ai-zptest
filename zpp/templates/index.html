@@ -541,6 +541,66 @@
             margin-top: 20px;
         }
         
+        /* 知识库卡片样式 */
+        .kb-list {
+            margin-top: 20px;
+        }
+        
+        .kb-card {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .kb-card:hover {
+            background: #f0f0f0;
+            border-color: #3498db;
+        }
+        
+        .kb-card.selected {
+            border-color: #27ae60;
+            background: #e8f5e9;
+        }
+        
+        .kb-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        
+        .kb-icon {
+            font-size: 28px;
+            margin-right: 15px;
+        }
+        
+        .kb-info {
+            flex: 1;
+        }
+        
+        .kb-name {
+            font-weight: 500;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        
+        .kb-meta {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+        
+        .kb-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
         .file-item {
             display: flex;
             align-items: center;
@@ -632,7 +692,7 @@
                 <span class="menu-icon">💬</span>
                 <span>对话</span>
             </div>
-            <div class="menu-item" data-page="knowledge">
+            <div class="menu-item" data-page="knowledge-list">
                 <span class="menu-icon">📚</span>
                 <span>知识库</span>
             </div>
@@ -663,8 +723,45 @@
             </div>
         </div>
         
-        <div id="knowledge-page" class="page" style="display: none;">
-            <div class="content-header">知识库管理</div>
+        <!-- 知识库列表页（一级页面） -->
+        <div id="knowledge-list-page" class="page" style="display: none;">
+            <div class="content-header">知识库</div>
+            <div class="content-area">
+                <div class="knowledge-container">
+                    <div class="knowledge-header">
+                        <h2 class="config-title">我的知识库</h2>
+                        <button class="btn btn-success" id="create-kb-btn">+ 新建知识库</button>
+                    </div>
+                    
+                    <!-- 新建知识库表单 -->
+                    <div id="create-kb-form" style="display: none; margin-bottom: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                        <h3 style="margin-bottom: 15px;">新建知识库</h3>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label class="form-label">知识库名称</label>
+                            <input type="text" class="form-input" id="new-kb-name" placeholder="输入知识库名称">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label class="form-label">描述（可选）</label>
+                            <input type="text" class="form-input" id="new-kb-desc" placeholder="输入描述">
+                        </div>
+                        <button class="btn btn-success" id="confirm-create-kb">创建</button>
+                        <button class="btn btn-secondary" id="cancel-create-kb">取消</button>
+                    </div>
+                    
+                    <!-- 知识库列表 -->
+                    <div class="kb-list" id="kb-list">
+                        <!-- 动态加载 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 知识库详情页（二级页面） -->
+        <div id="knowledge-detail-page" class="page" style="display: none;">
+            <div class="content-header">
+                <button class="btn btn-secondary" id="back-to-kb-list" style="margin-right: 15px;">← 返回</button>
+                <span id="kb-detail-title">知识库详情</span>
+            </div>
             <div class="content-area">
                 <div class="knowledge-container">
                     <div class="knowledge-header">
@@ -675,7 +772,7 @@
                         </div>
                     </div>
                     
-                    <div id="knowledge-dir-info" style="margin-bottom: 15px; color: #7f8c8d; font-size: 14px;"></div>
+                    <div id="kb-info" style="margin-bottom: 15px; color: #7f8c8d; font-size: 14px;"></div>
                     
                     <!-- 文件列表 -->
                     <div class="file-list" id="knowledge-file-list">
@@ -777,14 +874,17 @@
             providers: {},
             editingModel: null,
             knowledgeFiles: [],
-            supportedExtensions: []
+            supportedExtensions: [],
+            knowledgeBases: [],
+            currentKbId: null
         };
         
         // DOM 元素
         const elements = {
             menuItems: document.querySelectorAll('.menu-item'),
             chatPage: document.getElementById('chat-page'),
-            knowledgePage: document.getElementById('knowledge-page'),
+            knowledgeListPage: document.getElementById('knowledge-list-page'),
+            knowledgeDetailPage: document.getElementById('knowledge-detail-page'),
             configPage: document.getElementById('config-page'),
             chatMessages: document.getElementById('chat-messages'),
             chatInput: document.getElementById('chat-input'),
@@ -804,9 +904,19 @@
             editApiBase: document.getElementById('edit-api-base'),
             saveConfigBtn: document.getElementById('save-config-btn'),
             cancelEditBtn: document.getElementById('cancel-edit-btn'),
-            // 知识库相关
+            // 知识库列表相关
+            kbList: document.getElementById('kb-list'),
+            createKbBtn: document.getElementById('create-kb-btn'),
+            createKbForm: document.getElementById('create-kb-form'),
+            newKbName: document.getElementById('new-kb-name'),
+            newKbDesc: document.getElementById('new-kb-desc'),
+            confirmCreateKb: document.getElementById('confirm-create-kb'),
+            cancelCreateKb: document.getElementById('cancel-create-kb'),
+            // 知识库详情相关
+            backToKbList: document.getElementById('back-to-kb-list'),
+            kbDetailTitle: document.getElementById('kb-detail-title'),
             knowledgeFileList: document.getElementById('knowledge-file-list'),
-            knowledgeDirInfo: document.getElementById('knowledge-dir-info'),
+            kbInfo: document.getElementById('kb-info'),
             refreshFilesBtn: document.getElementById('refresh-files-btn'),
             initKnowledgeBtn: document.getElementById('init-knowledge-btn'),
             uploadSection: document.getElementById('upload-section'),
@@ -829,22 +939,36 @@
         function switchPage(page) {
             state.currentPage = page;
             
-            elements.menuItems.forEach(item => {
-                item.classList.toggle('active', item.dataset.page === page);
-            });
+            // 隐藏所有页面
+            elements.chatPage.style.display = 'none';
+            elements.knowledgeListPage.style.display = 'none';
+            elements.knowledgeDetailPage.style.display = 'none';
+            elements.configPage.style.display = 'none';
             
-            elements.chatPage.style.display = page === 'chat' ? 'flex' : 'none';
-            elements.knowledgePage.style.display = page === 'knowledge' ? 'flex' : 'none';
-            elements.configPage.style.display = page === 'config' ? 'flex' : 'none';
-            
-            if (page === 'config') {
+            // 显示目标页面
+            if (page === 'chat') {
+                elements.chatPage.style.display = 'flex';
+                updateCurrentModelBadge();
+            } else if (page === 'knowledge-list') {
+                elements.knowledgeListPage.style.display = 'flex';
+                loadKnowledgeBases();
+            } else if (page === 'knowledge-detail') {
+                elements.knowledgeDetailPage.style.display = 'flex';
+            } else if (page === 'config') {
+                elements.configPage.style.display = 'flex';
                 loadProviders();
                 loadModels();
-            } else if (page === 'chat') {
-                updateCurrentModelBadge();
-            } else if (page === 'knowledge') {
-                loadKnowledgeFiles();
             }
+            
+            // 更新菜单高亮
+            elements.menuItems.forEach(item => {
+                const itemPage = item.dataset.page;
+                if (itemPage === 'knowledge' && (page === 'knowledge-list' || page === 'knowledge-detail')) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.toggle('active', itemPage === page);
+                }
+            });
         }
         
         // 加载提供商列表
@@ -1195,20 +1319,180 @@
         
         // ========== 知识库管理 ==========
         
-        // 加载知识库文件列表
-        async function loadKnowledgeFiles() {
+        // 加载知识库列表
+        async function loadKnowledgeBases() {
             try {
-                const response = await fetch('/api/knowledge/files');
+                const response = await fetch('/api/knowledge/bases');
+                const data = await response.json();
+                state.knowledgeBases = data.bases || [];
+                renderKnowledgeBases();
+            } catch (error) {
+                showToast('加载知识库列表失败', 'error');
+            }
+        }
+        
+        // 渲染知识库列表
+        function renderKnowledgeBases() {
+            if (state.knowledgeBases.length === 0) {
+                elements.kbList.innerHTML = '<div class="empty-state">暂无知识库，点击"新建知识库"创建</div>';
+                return;
+            }
+            
+            elements.kbList.innerHTML = '';
+            
+            state.knowledgeBases.forEach(kb => {
+                const card = document.createElement('div');
+                card.className = `kb-card ${kb.selected ? 'selected' : ''}`;
+                
+                const statusText = kb.initialized ? `已初始化 (${kb.chunk_count} 个文本块)` : '未初始化';
+                
+                card.innerHTML = `
+                    <input type="checkbox" class="kb-checkbox" data-id="${kb.id}" ${kb.selected ? 'checked' : ''}>
+                    <div class="kb-icon">📚</div>
+                    <div class="kb-info">
+                        <div class="kb-name">${kb.name}</div>
+                        <div class="kb-meta">${kb.description || '无描述'} | ${kb.file_count || 0} 个文件 | ${statusText}</div>
+                    </div>
+                    <div class="kb-actions">
+                        <button class="btn btn-primary open-kb-btn" data-id="${kb.id}" data-name="${kb.name}">打开</button>
+                        <button class="btn btn-danger delete-kb-btn" data-id="${kb.id}">删除</button>
+                    </div>
+                `;
+                
+                elements.kbList.appendChild(card);
+            });
+            
+            // 绑定事件
+            document.querySelectorAll('.kb-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    e.stopPropagation();
+                    selectKnowledgeBase(e.target.dataset.id, e.target.checked);
+                });
+            });
+            
+            document.querySelectorAll('.open-kb-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openKnowledgeBase(btn.dataset.id, btn.dataset.name);
+                });
+            });
+            
+            document.querySelectorAll('.delete-kb-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteKnowledgeBase(btn.dataset.id);
+                });
+            });
+        }
+        
+        // 创建知识库
+        async function createKnowledgeBase() {
+            const name = elements.newKbName.value.trim();
+            const desc = elements.newKbDesc.value.trim();
+            
+            if (!name) {
+                showToast('请输入知识库名称', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/knowledge/bases', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description: desc })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('知识库创建成功');
+                    elements.createKbForm.style.display = 'none';
+                    elements.newKbName.value = '';
+                    elements.newKbDesc.value = '';
+                    loadKnowledgeBases();
+                } else {
+                    showToast(result.error || '创建失败', 'error');
+                }
+            } catch (error) {
+                showToast('创建失败', 'error');
+            }
+        }
+        
+        // 删除知识库
+        async function deleteKnowledgeBase(baseId) {
+            if (!confirm('确定要删除此知识库吗？所有文件和向量数据将被删除！')) return;
+            
+            try {
+                const response = await fetch(`/api/knowledge/bases/${baseId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('知识库已删除');
+                    loadKnowledgeBases();
+                } else {
+                    showToast(result.error || '删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('删除失败', 'error');
+            }
+        }
+        
+        // 选择/取消选择知识库
+        async function selectKnowledgeBase(baseId, selected) {
+            try {
+                const response = await fetch(`/api/knowledge/bases/${baseId}/select`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selected })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(selected ? '已选中知识库' : '已取消选中');
+                    loadKnowledgeBases();
+                }
+            } catch (error) {
+                showToast('操作失败', 'error');
+            }
+        }
+        
+        // 打开知识库详情
+        function openKnowledgeBase(baseId, baseName) {
+            state.currentKbId = baseId;
+            elements.kbDetailTitle.textContent = baseName;
+            switchPage('knowledge-detail');
+            loadKnowledgeFilesForBase(baseId);
+        }
+        
+        // 加载知识库文件列表
+        async function loadKnowledgeFilesForBase(baseId) {
+            if (!baseId) baseId = state.currentKbId;
+            if (!baseId) return;
+            
+            try {
+                const response = await fetch(`/api/knowledge/bases/${baseId}/files`);
                 const data = await response.json();
                 
                 state.knowledgeFiles = data.files || [];
                 state.supportedExtensions = data.supported_extensions || [];
                 
-                elements.knowledgeDirInfo.textContent = `知识库目录: ${data.knowledge_dir || ''}`;
+                const baseInfo = data.base_info || {};
+                elements.kbInfo.textContent = `${baseInfo.name || '知识库'} | ${baseInfo.file_count || 0} 个文件`;
                 
                 renderKnowledgeFiles();
             } catch (error) {
                 showToast('加载文件列表失败', 'error');
+            }
+        }
+        
+        // 加载知识库文件列表（兼容旧代码）
+        async function loadKnowledgeFiles() {
+            if (state.currentKbId) {
+                loadKnowledgeFilesForBase(state.currentKbId);
             }
         }
         
@@ -1267,8 +1551,13 @@
         async function deleteKnowledgeFile(filename) {
             if (!confirm(`确定要删除文件 "${filename}" 吗？`)) return;
             
+            if (!state.currentKbId) {
+                showToast('请先选择知识库', 'error');
+                return;
+            }
+            
             try {
-                const response = await fetch(`/api/knowledge/files/${encodeURIComponent(filename)}`, {
+                const response = await fetch(`/api/knowledge/bases/${state.currentKbId}/files/${encodeURIComponent(filename)}`, {
                     method: 'DELETE'
                 });
                 
@@ -1276,7 +1565,7 @@
                 
                 if (result.success) {
                     showToast('文件已删除');
-                    loadKnowledgeFiles();
+                    loadKnowledgeFilesForBase(state.currentKbId);
                     elements.initSection.style.display = 'block';
                 } else {
                     showToast(result.error || '删除失败', 'error');
@@ -1288,6 +1577,11 @@
         
         // 上传文件
         async function uploadFiles(files) {
+            if (!state.currentKbId) {
+                showToast('请先选择知识库', 'error');
+                return;
+            }
+            
             const formData = new FormData();
             let hasValidFiles = false;
             
@@ -1304,7 +1598,7 @@
             if (!hasValidFiles) return;
             
             try {
-                const response = await fetch('/api/knowledge/files', {
+                const response = await fetch(`/api/knowledge/bases/${state.currentKbId}/files`, {
                     method: 'POST',
                     body: formData
                 });
@@ -1325,11 +1619,16 @@
         
         // 初始化知识库
         async function initKnowledge() {
+            if (!state.currentKbId) {
+                showToast('请先选择知识库', 'error');
+                return;
+            }
+            
             elements.initKnowledgeBtn.disabled = true;
             elements.initKnowledgeBtn.textContent = '初始化中...';
             
             try {
-                const response = await fetch('/api/knowledge/init', {
+                const response = await fetch(`/api/knowledge/bases/${state.currentKbId}/init`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
@@ -1351,8 +1650,31 @@
             }
         }
         
-        // 知识库事件监听
-        elements.refreshFilesBtn.addEventListener('click', loadKnowledgeFiles);
+        // 知识库列表事件监听
+        elements.createKbBtn.addEventListener('click', () => {
+            elements.createKbForm.style.display = 'block';
+        });
+        
+        elements.cancelCreateKb.addEventListener('click', () => {
+            elements.createKbForm.style.display = 'none';
+            elements.newKbName.value = '';
+            elements.newKbDesc.value = '';
+        });
+        
+        elements.confirmCreateKb.addEventListener('click', createKnowledgeBase);
+        
+        // 知识库详情事件监听
+        elements.backToKbList.addEventListener('click', () => {
+            state.currentKbId = null;
+            switchPage('knowledge-list');
+        });
+        
+        elements.refreshFilesBtn.addEventListener('click', () => {
+            if (state.currentKbId) {
+                loadKnowledgeFilesForBase(state.currentKbId);
+            }
+        });
+        
         elements.initKnowledgeBtn.addEventListener('click', initKnowledge);
         
         elements.selectFileBtn.addEventListener('click', () => {
@@ -1389,7 +1711,6 @@
         (async function init() {
             await loadModels();
             updateCurrentModelBadge();
-            loadKnowledgeFiles();
             switchPage('chat');
         })();
     </script>

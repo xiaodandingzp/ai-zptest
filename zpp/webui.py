@@ -141,15 +141,26 @@ def create_app():
                 if user_query:
                     knowledge_manager = KnowledgeManager()
                     context = knowledge_manager.get_context_for_query(user_query, k=4)
+
+                    print("参考资料 上下文: ", context)
                     
                     if context:
                         # 在消息开头添加系统提示和上下文
                         system_message = {
                             "role": "system",
-                            "content": f"""你是一个有帮助的AI助手。回答问题时参考以下参考资料。如果参考资料中没有相关信息，请根据你的知识回答。
+                            "content": f"""你是一个有帮助的AI助手。请根据用户问题，结合参考资料给出回答。如果参考资料中没有相关信息，请根据你的知识回答。
 
-参考资料:
-{context}"""
+## 参考资料
+{context}
+
+## 回答要求
+1. **简洁明了**：去除冗余信息，直接回答问题
+2. **格式规范**：
+   - 使用标题、列表等方式组织内容，便于阅读
+   - 代码和命令使用代码块包裹，并标注语言
+   - 步骤使用有序列表
+   - 重要提示使用引用块
+3. **如实回答**：如果参考资料中没有相关信息，请根据你的知识回答"""
                         }
                         # 构建带上下文的消息
                         messages_with_context = [system_message] + messages
@@ -244,13 +255,18 @@ def create_app():
         if file.filename == '':
             return jsonify({'success': False, 'error': '没有选择文件'}), 400
         
-        # 安全的文件名
-        filename = secure_filename(file.filename)
+        # 获取原始文件名（支持中文）
+        # secure_filename 会移除非 ASCII 字符，所以需要手动处理
+        original_filename = file.filename
+        # 安全检查：只保留文件名，移除路径
+        filename = os.path.basename(original_filename)
+        
         if not filename:
             return jsonify({'success': False, 'error': '无效的文件名'}), 400
         
         manager = KnowledgeManager()
         
+        print("add_knowledge_file filename:" + filename)
         # 检查文件格式
         if not manager.is_supported_file(filename):
             return jsonify({

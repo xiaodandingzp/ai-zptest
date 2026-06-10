@@ -152,6 +152,7 @@ class LangChainClient(BaseLLMClient):
             elif role == "system":
                 langchain_messages.append(SystemMessage(content=content))
         
+        print("langchain_messages: ", langchain_messages)
         return langchain_messages
     
     def chat(self, messages, stream=False):
